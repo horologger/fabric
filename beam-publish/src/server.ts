@@ -374,42 +374,42 @@ app.get('/', async (req: Request, res: Response) => {
 });
 
 // Publish a zone
-async function publishZone(file: string | undefined): Promise<void> {
+async function publishZone(file: string | undefined): Promise<object> {
   // try {
 
-    const opts = {};
-    let beam: Beam;
-    try {
-      let input: string = '';
+  const opts = {};
+  let beam: Beam;
+  try {
+    let input: string = '';
 
-      if (file && file !== '-') {
-        input = fs.readFileSync(file, 'utf8');
+    if (file && file !== '-') {
+      input = fs.readFileSync(file, 'utf8');
+    } else {
+      if (process.stdin.isTTY) {
+        input = '';
       } else {
-        if (process.stdin.isTTY) {
-          input = '';
-        } else {
-          // Read from stdin asynchronously.
-          for await (const chunk of process.stdin) {
-            input += chunk;
-          }
+        // Read from stdin asynchronously.
+        for await (const chunk of process.stdin) {
+          input += chunk;
         }
       }
-
-      const data = JSON.parse(input);
-      beam = await Beam.create(opts);
-      await publishEvent(beam, data);
-    } catch (e) {
-      console.error('Error publishing: ', e instanceof Error ? e.message : e);
-    } finally {
-      try {
-        // @ts-ignore
-        await beam.destroy();
-      } catch (_) {}
     }
 
-  //   const result = { success: true, message: 'Zone published successfully' };
-  //   return result;  
-  // } catch (error) {
+    const data = JSON.parse(input);
+    beam = await Beam.create(opts);
+    await publishEvent(beam, data);
+  } catch (e) {
+    console.error('Error publishing: ', e instanceof Error ? e.message : e);
+  } finally {
+    try {
+      // @ts-ignore
+      await beam.destroy();
+    } catch (_) {}
+    const result = { success: true, message: 'Zone ' + file + ' published successfully' };
+    return result;  
+  }
+
+ // } catch (error) {
   //   console.error('Error publishing zone:', error);
   //   throw error;
   // }
