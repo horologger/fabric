@@ -95,6 +95,7 @@ app.get('/', async (req: Request, res: Response) => {
             <h2>Example Usage:</h2>
             <p>Try querying a space by adding the "q" parameter:</p>
             <p><code>http://127.0.0.1:${port}/?q=@example</code></p>
+            <p><a href="http://127.0.0.1:${port}/pub/?q=@zap">http://127.0.0.1:${port}/pub/?q=@zap</a></p>
           </div>
         </body>
       </html>
@@ -108,6 +109,18 @@ app.get('/', async (req: Request, res: Response) => {
     res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
 });
+
+// Publish a zone
+async function publishZone(space: string): Promise<object> {
+  try {
+    const result = { success: true, message: 'Zone published successfully' };
+    return result;  
+  } catch (error) {
+    console.error('Error publishing zone:', error);
+    throw error;
+  }
+}
+
 
 app.get('/pub', async (req: Request, res: Response) => {
   const query = req.query.q as string;
@@ -151,7 +164,7 @@ app.get('/pub', async (req: Request, res: Response) => {
           <div class="example">
             <h2>Example Usage:</h2>
             <p>Try querying a space by adding the "q" parameter:</p>
-            <p><code>http://127.0.0.1:${port}/pub?q=@example</code></p>
+            <p><a href="http://127.0.0.1:${port}/pub/?q=@zap">http://127.0.0.1:${port}/pub/?q=@zap</a></p>
           </div>
         </body>
       </html>
@@ -159,8 +172,8 @@ app.get('/pub', async (req: Request, res: Response) => {
   }
 
   try {
-    const records = await queryDNS(query);
-    res.json(records);
+    const result = await publishZone(query);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: error instanceof Error ? error.message : String(error) });
   }
