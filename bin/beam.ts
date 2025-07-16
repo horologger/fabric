@@ -329,10 +329,10 @@ program
 
 
 program
-  .command('npub <kind> [d-tag]')
+  .command('npub <npub> <kind> [dTag]')
   .option('--latest', 'Find the latest version of the event')
   .description('Query Nostr events for an npub')
-  .action(async (npub: string, kind: string, dTag: string | undefined, cmd: any) => {
+  .action(async (npub: string, kind: string, dTag: string | undefined, _: any,  cmd: any) => {
     const opts = cmd.optsWithGlobals();
     let beam: Beam | null = null;
 
