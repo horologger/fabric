@@ -12,11 +12,17 @@ interface Anchor {
     };
 }
 
+interface BasicAuthConfig {
+    username: string;
+    password: string;
+}
+
 interface UpdateOptions {
     localPath?: string;        // Local file
     remoteUrls?: string[];     // Remote endpoints to fetch anchor file
     staticAnchors?: Anchor[];  // Use the following static anchors
     checkIntervalMs?: number;  // Periodic refresh
+    basicAuth?: BasicAuthConfig;
 }
 
 export class AnchorStore {
@@ -198,12 +204,59 @@ export class AnchorStore {
     return null;
   }
 
+  private extractAuthFromUrl(url: string): { username: string; password: string } | null {
+    try {
+      const urlObj = new URL(url);
+      if (urlObj.username && urlObj.password) {
+        return {
+          username: decodeURIComponent(urlObj.username),
+          password: decodeURIComponent(urlObj.password)
+        };
+      }
+    } catch (err) {
+      log(`Invalid URL format: ${url}`);
+    }
+    return null;
+  }
+
+  private cleanUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      urlObj.username = '';
+      urlObj.password = '';
+      return urlObj.toString();
+    } catch (err) {
+      log(`Invalid URL format: ${url}`);
+      return url;
+    }
+  }
+
+  private createAuthHeaders(url: string): HeadersInit {
+    const headers: HeadersInit = {};
+    const authFromUrl = this.extractAuthFromUrl(url);
+    if (authFromUrl) {
+      const credentials = Buffer.from(`${authFromUrl.username}:${authFromUrl.password}`).toString('base64');
+      headers['Authorization'] = `Basic ${credentials}`;
+    } else if (this.options.basicAuth) {
+      const { username, password } = this.options.basicAuth;
+      const credentials = Buffer.from(`${username}:${password}`).toString('base64');
+      headers['Authorization'] = `Basic ${credentials}`;
+    }
+
+    return headers;
+  }
+
   private async fetchAnchorsFromRemotes(remoteUrls: string[]): Promise<Anchor[]> {
     const responses = await Promise.all(
       remoteUrls.map(async url => {
         log(`Fetching anchors from: ${url}`);
         try {
-          const res = await fetch(url);
+          const authHeaders = this.createAuthHeaders(url);
+          const cleanUrl = this.cleanUrl(url);
+
+          const res = await fetch(cleanUrl, {
+            headers: authHeaders
+          });
           if (!res.ok) {
             throw new Error(`Status: ${res.status}`);
           }
@@ -238,9 +291,9 @@ export class AnchorStore {
     for (const group of groups.values()) {
       if (
         !chosen ||
-                group.count > chosen.count ||
-                (group.count === chosen.count &&
-                    group.anchors[0].block.height > chosen.anchors[0].block.height)
+        group.count > chosen.count ||
+      (group.count === chosen.count &&
+       group.anchors[0].block.height > chosen.anchors[0].block.height)
       ) {
         chosen = group;
       }
@@ -250,6 +303,7 @@ export class AnchorStore {
     }
     return chosen.anchors;
   }
+
 
   public isStale(version: number): boolean {
     return version < this.staleThreshold;
