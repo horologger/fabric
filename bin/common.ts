@@ -18,7 +18,7 @@ interface Address {
 
 export function defineMainOptions() {
   program
-    .version('0.0.6')
+    .version('0.0.7')
     .option('--host <host>', 'The host to bind to')
     .option('--port <port>', 'The port to bind to')
     .option('--seeds <nodes...>', 'Connect to the following bootstrap nodes')
@@ -56,16 +56,19 @@ export async function nodeOpts(opts: MainOptions): Promise<FabricOptions> {
 
 export async function anchorFromOpts(opts: MainOptions): Promise<AnchorStore> {
   const localAnchors = opts.localAnchors || process.env.FABRIC_LOCAL_ANCHORS;
-  const remoteAnchors =
-        opts.remoteAnchors ||
-        (process.env.FABRIC_REMOTE_ANCHORS
-          ? process.env.FABRIC_REMOTE_ANCHORS.split(',')
-          : ['http://127.0.0.1:7225/root-anchors.json']);
+  const remoteAnchors = opts.remoteAnchors || (process.env.FABRIC_REMOTE_ANCHORS ? process.env.FABRIC_REMOTE_ANCHORS.split(',') : undefined);
 
-  return AnchorStore.create({
-    localPath: localAnchors,
-    remoteUrls: remoteAnchors,
-  });
+  const updateOptions: any = {};
+
+  if (localAnchors) {
+    updateOptions.localPath = localAnchors;
+  } else if (remoteAnchors) {
+    updateOptions.remoteUrls = remoteAnchors;
+  } else {
+    updateOptions.remoteUrls = ['http://127.0.0.1:7225/root-anchors.json'];
+  }
+
+  return AnchorStore.create(updateOptions);
 }
 
 export function joinHostPort(address: Address | null): string {
